@@ -160,7 +160,7 @@
   <div class="spacer"></div>
   <label class="btn primary" id="pickBtn" for="file">选择图片</label>
   <input type="file" id="file" accept="image/*" multiple hidden>
-  <button class="btn" id="resetBtn"><span class="long">重置版式</span><span class="short">重置</span></button>
+  <button class="btn" id="resetBtn" disabled><span class="long">删照片</span><span class="short">删照片</span></button>
   <button class="btn" id="saveBtn" disabled><span class="long">保存图片</span><span class="short">保存</span></button>
 </header>
 
@@ -547,6 +547,7 @@ function loadFile(file){
       if ($('#autoNow').checked) fillNow();
       render();
       $('#saveBtn').disabled = false;
+      $('#resetBtn').disabled = false;
       $('#batchBtn').disabled = state.files.length < 2;
       res();
     };
@@ -686,12 +687,21 @@ function bindFields(){
   $('#color').addEventListener('input', e => { state.st.color = e.target.value; render(); });
 }
 
-function resetStyle(){
-  state.st = JSON.parse(JSON.stringify(DEF));
-  buildSliders();
-  $('#color').value = DEF.color;
-  render();
-  toast('版式已重置');
+/* 把当前这张照片丢掉，回到没选图的状态，方便直接换下一张。
+   版式和填好的文字都保留——只是不要这张图了。 */
+function clearPhoto(){
+  state.img = null; state.W = 0; state.H = 0;
+  state.files = []; state.loaded = 0;
+  const cv = $('#cv');
+  cv.width = 0; cv.height = 0;
+  cardRect = null;
+  $('#wrap').hidden = true;
+  $('#empty').hidden = false;
+  $('#resetBtn').disabled = true;
+  $('#saveBtn').disabled = true;
+  $('#batchBtn').disabled = true;
+  $('#file').value = '';
+  toast('照片已删除，可以选下一张');
 }
 
 /* 全部回到初始状态：版式参数 + 所有文字 + 浏览器里记住的那份。
@@ -878,7 +888,7 @@ document.addEventListener('change', e => {
 });
 
 $('#file').addEventListener('change', e => { handleFiles(e.target.files); e.target.value = ''; });
-$('#resetBtn').addEventListener('click', resetStyle);
+$('#resetBtn').addEventListener('click', clearPhoto);
 $('#resetAllBtn').addEventListener('click', resetAll);
 $('#saveBtn').addEventListener('click', saveOne);
 $('#batchBtn').addEventListener('click', batchExport);
