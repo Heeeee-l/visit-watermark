@@ -176,8 +176,8 @@
   <aside class="panel">
     <div class="grp">
       <div class="grp-t">文字内容</div>
-      <label class="row"><span>拜访人</span><input type="text" id="f_visitor" value="冯世杰"></label>
-      <label class="row"><span>拜访对象</span><input type="text" id="f_target" value="韩愈"></label>
+      <label class="row"><span>拜访人</span><input type="text" id="f_visitor" placeholder="请输入拜访人"></label>
+      <label class="row"><span>拜访对象</span><input type="text" id="f_target" placeholder="请输入拜访对象"></label>
       <label class="row"><span>拜访方式</span><input type="text" id="f_method" value="当面拜访"></label>
       <label class="row"><span>拜访目的</span><input type="text" id="f_purpose" value="黄金宝典客户"></label>
       <label class="row"><span>地点</span><input type="text" id="f_location" value="河南省信阳市浉河区茶韵路"></label>
@@ -211,6 +211,12 @@
       <div class="grp-t">批量</div>
       <div class="tip">选多张图片时，第一张进入编辑；参数调好后点下面按钮，<b>所有图片会按同一套版式</b>统一输出（适合同一台手机拍的整批照片）。</div>
       <button class="btn" id="batchBtn" style="margin-top:9px;width:100%;justify-content:center" disabled>批量导出全部图片</button>
+    </div>
+
+    <div class="grp">
+      <div class="grp-t">恢复</div>
+      <div class="tip">把版式参数和上面填的文字全部清回初始状态，连同浏览器里记住的内容一起清掉。</div>
+      <button class="btn" id="resetAllBtn" style="margin-top:9px;width:100%;justify-content:center">恢复到最初的</button>
     </div>
   </aside>
 </main>
@@ -452,12 +458,16 @@ function paint(ctx, W, H, img, st, f){
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
 
-  const rows = ['拜访人:' + f.visitor, '拜访对象:' + f.target,
-                '拜访方式:' + f.method, '拜访目的:' + f.purpose];
-  for (let i = 0; i < rows.length; i++){
-    line(ctx, rows[i], bx + fs(CAL.bodyX), by + fs(CAL.bodyBase0 + i * CAL.bodyStep),
-         fs(st.bodySize), st.bodySx, fs(st.bodySp), 500, FF, i === 3 ? fs(9) : 0);
-  }
+  /* 留空的那一行整行不画，后面的行依次往上顶，不留空洞。
+     冒号后的额外留白按「拜访目的」这个键判定，不按行号——
+     行被跳过后行号就不准了。 */
+  const KV = [['拜访人:', f.visitor], ['拜访对象:', f.target],
+              ['拜访方式:', f.method], ['拜访目的:', f.purpose]];
+  KV.forEach(([k, v], i) => {
+    if (!v || !v.trim()) return;          // 空行跳过绘制，但位置照留，和原图的行距一致
+    line(ctx, k + v.trim(), bx + fs(CAL.bodyX), by + fs(CAL.bodyBase0 + i * CAL.bodyStep),
+         fs(st.bodySize), st.bodySx, fs(st.bodySp), 500, FF, k === '拜访目的:' ? fs(9) : 0);
+  });
 
   line(ctx, f.time, bx + fs(CAL.timeX), by + fs(CAL.timeBase),
        fs(st.timeSize), st.timeSx, fs(st.timeSp), 500);
@@ -684,6 +694,28 @@ function resetStyle(){
   toast('版式已重置');
 }
 
+/* 全部回到初始状态：版式参数 + 所有文字 + 浏览器里记住的那份。
+   拜访人和拜访对象本来就是空的，重置后仍是空的。 */
+const FIELD_DEFAULT = {
+  visitor: '', target: '', method: '当面拜访', purpose: '黄金宝典客户',
+  location: '河南省信阳市浉河区茶韵路',
+  time: '', date: '', week: ''
+};
+
+function resetAll(){
+  if (!confirm('把版式和填好的文字都恢复成初始状态？')) return;
+  try{ localStorage.removeItem(LS_KEY); }catch(_){}
+  state.st = JSON.parse(JSON.stringify(DEF));
+  for (const k in FIELD_DEFAULT){
+    const el = $('#f_' + k);
+    if (el) el.value = FIELD_DEFAULT[k];
+  }
+  buildSliders();
+  $('#color').value = DEF.color;
+  render();
+  toast('已恢复到最初状态');
+}
+
 /* ---------------- 导出 ---------------- */
 /* 手机上优先调系统分享面板（可以直接存进相册）；
    桌面或浏览器不支持时退回普通下载。 */
@@ -791,7 +823,7 @@ function bindKeys(){
 }
 
 /* ---------------- 记忆上次参数 ---------------- */
-const LS_KEY = 'visit_wm_tool_v2';
+const LS_KEY = 'visit_wm_tool_v3';
 let lsTimer = null;
 
 function saveLS(){
@@ -847,6 +879,7 @@ document.addEventListener('change', e => {
 
 $('#file').addEventListener('change', e => { handleFiles(e.target.files); e.target.value = ''; });
 $('#resetBtn').addEventListener('click', resetStyle);
+$('#resetAllBtn').addEventListener('click', resetAll);
 $('#saveBtn').addEventListener('click', saveOne);
 $('#batchBtn').addEventListener('click', batchExport);
 
