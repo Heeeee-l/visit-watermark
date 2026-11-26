@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0f1211" />
+<title>拜访水印工具</title>
+<style>
+  :root{
+    --bg:#0f1211; --panel:#171b1a; --panel2:#1d2321; --line:#2a322f;
+    --txt:#e9eeec; --dim:#8b9691; --acc:#38d39f; --acc-d:#0b2b22;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg);color:var(--txt);overflow:hidden;
+    font:13.5px/1.55 -apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    display:flex;flex-direction:column;
+  }
+  header{
+    height:54px;flex:0 0 54px;display:flex;align-items:center;gap:10px;
+    padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line);
+  }
+  .logo{font-weight:600;font-size:14px;letter-spacing:.3px}
+  .logo i{color:var(--acc);font-style:normal}
+  .spacer{flex:1}
+  .btn{
+    height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--txt);font-size:13px;cursor:pointer;
+    display:inline-flex;align-items:center;transition:.15s;
+  }
+  .btn:hover{background:#242c29;border-color:#3a4642}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#04231a;font-weight:600}
+  .btn.primary:hover{background:#4ae0ac}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  main{flex:1;display:flex;min-height:0}
+  .stage{
+    flex:1;min-width:0;display:grid;place-items:center;padding:18px;overflow:auto;
+    background:radial-gradient(circle at 50% 0%,#1a211e,#0c0f0e 72%);
+  }
+  .empty{color:var(--dim);text-align:center;font-size:13px;line-height:2}
+  .empty span{font-size:12px;opacity:.6}
+  .wrap{position:relative;display:inline-block;line-height:0;border-radius:8px;overflow:visible}
+  canvas{
+    display:block;max-width:100%;max-height:calc(100vh - 116px);max-height:calc(100dvh - 116px);
+    box-shadow:0 16px 48px rgba(0,0,0,.55);border-radius:8px;
+  }
+  .box{
+    position:absolute;border:1.5px dashed rgba(56,211,159,.85);border-radius:5px;
+    cursor:move;touch-action:none;
+  }
+  .box:hover{background:rgba(56,211,159,.06)}
+  .box i{
+    position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border-radius:4px;
+    background:var(--acc);box-shadow:0 0 0 2px rgba(0,0,0,.35);cursor:nwse-resize;
+  }
+
+  .panel{
+    width:336px;flex:0 0 336px;background:var(--panel);border-left:1px solid var(--line);
+    overflow-y:auto;padding:6px 14px 96px;
+  }
+  .panel::-webkit-scrollbar{width:8px}
+  .panel::-webkit-scrollbar-thumb{background:#2c3532;border-radius:4px}
+  .grp{padding:12px 0;border-bottom:1px solid var(--line)}
+  .grp:last-child{border-bottom:0}
+  .grp-t{font-size:12px;color:var(--dim);letter-spacing:.6px;margin-bottom:8px;font-weight:600}
+  .row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .row > span{flex:0 0 62px;font-size:12.5px;color:#b6c0bc}
+  .row input[type=text]{
+    flex:1;min-width:0;height:30px;padding:0 9px;border-radius:7px;
+    border:1px solid var(--line);background:#121615;color:var(--txt);font-size:13px;
+    font-family:inherit;outline:none;
+  }
+  .row input[type=text]:focus{border-color:var(--acc);background:#0d1412}
+  .row2{display:flex;gap:8px}
+  .row2 .row{flex:1}
+  .row2 .row > span{flex:0 0 42px}
+  .chips{display:flex;gap:6px;margin:2px 0 9px}
+  .chip{
+    height:26px;padding:0 11px;border-radius:13px;border:1px solid var(--line);
+    background:#141917;color:#b6c0bc;font-size:12px;cursor:pointer;font-family:inherit;
+    transition:.15s;
+  }
+  .chip:hover{border-color:var(--acc);color:var(--acc);background:#10201a}
+  .chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#9aa5a0;margin-top:2px;cursor:pointer}
+  .chk input{accent-color:var(--acc)}
+
+  .sl{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  .sl > span{flex:0 0 62px;font-size:12.5px;color:#b6c0bc}
+  .sl input[type=range]{
+    flex:1;min-width:0;height:18px;accent-color:var(--acc);background:transparent;cursor:pointer;
+  }
+  .sl > b{flex:0 0 40px;text-align:right;font-size:12px;color:var(--dim);font-weight:400;font-variant-numeric:tabular-nums}
+
+  .tip{font-size:11.5px;color:#6f7a76;line-height:1.7;padding:10px 0 0}
+  .colorbox{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);overflow:hidden;flex:0 0 26px}
+  .colorbox input{width:200%;height:200%;margin:-50%;border:0;padding:0;cursor:pointer;background:none}
+  #toast{
+    position:fixed;left:50%;bottom:34px;transform:translate(-50%,20px);opacity:0;
+    background:#1e2724;border:1px solid #35403c;color:#dff5ec;padding:9px 18px;
+    border-radius:10px;font-size:13px;pointer-events:none;transition:.25s;z-index:99;
+  }
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+  .btn .short{display:none}
+
+  /* ---------- 手机竖屏 ---------- */
+  @media (max-width: 860px){
+    html,body{max-width:100%;overflow-x:hidden}
+    body{overflow-y:auto;-webkit-text-size-adjust:100%}
+    main{width:100%;min-width:0}
+    .panel{min-width:0;overflow-x:hidden}
+    .grp,.row,.sl,.chips{min-width:0}
+    .chips{flex-wrap:wrap}
+    header{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+      height:auto;flex:0 0 auto;padding:6px 8px;
+      position:sticky;top:0;z-index:20;
+      padding-top:calc(6px + env(safe-area-inset-top));
+    }
+    .logo{grid-column:1/-1;font-size:13px;white-space:nowrap}
+    .spacer{display:none}
+    header .btn{
+      height:34px;padding:0;font-size:12.5px;justify-content:center;
+      width:auto;min-width:0;white-space:nowrap;
+    }
+    .btn .long{display:none}
+    .btn .short{display:inline}
+    main{flex-direction:column;flex:none}
+    .stage{padding:8px;flex:none}
+    canvas{max-height:38vh;max-height:38dvh;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+    .panel{
+      width:auto;flex:none;border-left:none;border-top:1px solid var(--line);
+      padding:4px 12px calc(88px + env(safe-area-inset-bottom));overflow:visible;
+    }
+    .row > span,.sl > span{flex:0 0 58px}
+    .row input[type=text]{height:34px;font-size:16px}   /* 16px 防 iOS 自动缩放 */
+    .chip{height:30px}
+    .btn{height:34px}
+    #toast{bottom:calc(18px + env(safe-area-inset-bottom))}
+  }
+  @media (max-width: 860px) and (orientation: landscape){
+    header{display:flex;flex-wrap:nowrap;gap:8px;padding:0 10px;height:48px}
+    .logo{flex:1;grid-column:auto}
+    header .btn{flex:0 0 auto;padding:0 10px;width:auto}
+    main{flex-direction:row}
+    .stage{flex:1;overflow:auto}
+    canvas{max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px)}
+    .panel{width:300px;flex:0 0 300px;border-left:1px solid var(--line);
+           border-top:none;overflow-y:auto;padding-bottom:40px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><i>◉</i> <span class="logo-t">拜访水印工具</span></div>
+  <div class="spacer"></div>
+  <label class="btn primary" id="pickBtn">选择图片<input type="file" id="file" accept="image/*" multiple hidden></label>
+  <button class="btn" id="resetBtn"><span class="long">重置版式</span><span class="short">重置</span></button>
+  <button class="btn" id="saveBtn" disabled><span class="long">保存图片</span><span class="short">保存</span></button>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <div class="empty" id="empty">把照片拖进来，或点右上角「选择图片」<br><span>整张照片原分辨率输出，不会压缩画质</span></div>
+    <div class="wrap" id="wrap" hidden>
+      <canvas id="cv"></canvas>
+      <div class="box" id="box"><i class="h" id="handle"></i></div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="grp">
+      <div class="grp-t">文字内容</div>
+      <label class="row"><span>拜访人</span><input type="text" id="f_visitor" value="冯世杰"></label>
+      <label class="row"><span>拜访对象</span><input type="text" id="f_target" value="韩愈"></label>
+      <label class="row"><span>拜访方式</span><input type="text" id="f_method" value="当面拜访"></label>
+      <label class="row"><span>拜访目的</span><input type="text" id="f_purpose" value="黄金宝典客户"></label>
+      <label class="row"><span>地点</span><input type="text" id="f_location" value="河南省信阳市浉河区茶韵路"></label>
+      <label class="row"><span>时间</span><input type="text" id="f_time" value="09:12" placeholder="09:12"></label>
+      <div class="row2">
+        <label class="row"><span>日期</span><input type="text" id="f_date" value="2026/11/26" placeholder="2026/11/26"></label>
+        <label class="row"><span>星期</span><input type="text" id="f_week" value="星期四"></label>
+      </div>
+      <div class="chips">
+        <button class="chip" data-day="0">今天</button>
+        <button class="chip" data-day="-1">昨天</button>
+        <button class="chip" data-day="-2">前天</button>
+        <button class="chip" data-now="1">当前时间</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="autoWeek" checked> 改日期自动算星期</label>
+      <label class="chk"><input type="checkbox" id="autoNow"> 载入图片时自动填当前时间</label>
+    </div>
+
+    <div class="grp">
+      <div class="grp-t">版式微调</div>
+      <div id="sliders"></div>
+      <div class="sl">
+        <span>文字颜色</span>
+        <div class="colorbox"><input type="color" id="color" value="#ffffff"></div>
+        <b style="flex:1"></b>
+      </div>
+      <div class="tip">卡片框可拖动改位置，右下角小方块拖动改宽度。方向键 ±1px 微调，Shift+方向键 ±10px。</div>
+    </div>
+
+    <div class="grp">
+      <div class="grp-t">批量</div>
+      <div class="tip">选多张图片时，第一张进入编辑；参数调好后点下面按钮，<b>所有图片会按同一套版式</b>统一输出（适合同一台手机拍的整批照片）。</div>
+      <button class="btn" id="batchBtn" style="margin-top:9px;width:100%;justify-content:center" disabled>批量导出全部图片</button>
+    </div>
+  </aside>
+</main>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const FF = '"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif';
+const NF = '"SF Pro Text","SF Pro Display",-apple-system,"Helvetica Neue",sans-serif';
+const BASE_W = 1280;
+const WEEKDAYS = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+
+const DEF = {
+  boxX:34, boxY:29, boxW:648, boxH:509,
+  radius:26, alpha:0.50, blur:0, scale:1,
+  bodySize:40.5, bodySx:1.27, bodySp:1.4,
+  timeSize:60, timeSx:1.283, timeSp:1.12,
+  dateSize:30, dateSx:1.2532, dateSp:0.6, weekSx:1.1876, weekSp:0,
+  locSize:30, locSx:1.268, locSp:-0.96,
+  textAlpha:0.9468, color:'#ffffff', card:'#646464'
+};
+
+/* 位置校准常量：相对卡片左上角，基准 1280 宽，单位 px。
+   数值来自对原图逐行逐字的像素测量，勿随意改动。 */
+const CAL = {
+  bodyX:42, bodyBase0:63, bodyStep:76,
+  timeX:33, timeBase:411,
+  dateX:276, dateBase:409, weekX:484,
+  locX:88, locBase:480,
+  pinX:38, pinY:451, pinW:28, pinH:28,
+  ruleY:328, ruleA:0.10
+};
+
+const state = {
+  img:null, W:0, H:0,
+  st: JSON.parse(JSON.stringify(DEF)),
+  files: [],   // 批量用的原始 File 列表
+  loaded: 0
+};
+
+/* ---------------- 渲染 ---------------- */
+let cardRect = null;
+
+function roundRect(ctx,x,y,w,h,r){
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+/* 定位图标：直接用从原水印照片反解出来的 alpha 模板（28×27） */
+const PIN_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAADeElEQVR42p2WXWjVdRjHPzuubbVcL5AREyMMLZRAMm1bOKOwFrZR1EUwCrooDCIoIcRuhLoQii66qcgxvAylkMRVWisqbRoZNhzNiIyatdSyl4m2Pl30PXk6/I97eeDHn8Pvefs9z/f5PqdOZQZyDXAV0Jjfp4AjwK/TdVA/xf0lQCdwY85lQAm4ALgYmANMAEeBg8A+YBD4vZbDuhovrAfWAD3AgryqOY6OA3XAXKAFuKjsC/gZ+ATYBeyN7pQB7wVWA4uAK4FRYBw4DAwB+4Gy0TxgGXAT0AHMTwJjwCFgR4KfE7XyPKgOqKPqR+pmtbVKp9apU29Xt6pH1XF1p9pTqVdp0B2FEfVN9a5pBqo+jeoz6rD6k7pb7aoO2KZuUw+qW9RFswxWeR5Wh9Tv43ul+h9K7wSuB74CNudbLeuiMwH8CDQFuZPANuD1Kv2+fB8HlgCrgE9LwELghjh6t0awTcD6IPfSjEYpY3MbsAF4tMCuD/gwNh1AC+om9ZC6V11eUJqnA6Jx9UW1peLu2vT7dNrRW2D/UMo6ot5TApYngz+BzwqyXB24DwPPhV3KcgTYmKq0pmzVsi82c4Gl9ZmbxpSoiAWagL+B0xnsajmWZEtAQ8H9N9GpAxpL4cGmMEmRlNniCmBlwX1bsv8N+LbgviEJnwUmS8DbYZI5FaRcKQPASEq2EWiPk2agG3gqLfkS2Flg3xFwnQFO1Ids1wKXAzcDH1QZ9Iesu4PmvowCaUdT+tsf6ivCQAPwNTBYquDIBuD+AoO/gJeBLcA7IfDmCjJ/D3gps1i0ba5LOfcDX5Sh26V+nvHoPQ97XKguzPisUJeGymrpPxa22aO2VzLNKHAi/XkkqNpdkPFESjMduRW4O5UYAg4QKJfn6Q3gB2BFgNDJ7GUV8ERW3BiwJ6D537aYF+Ke8F/ZpS6ZBWm3q2+px9OiJ9X6ovWE2qnu8JxsVRfMIFibul09qY6pr6hX19qH5XNHMlQ9q76qzp9GsDXh1ZPqd6nWsmq9WsZdQZbqH2p/HNbS71UH1V9C9M+qi4t0z5fxLQk0lqw/Vh8o0NugHk5iw9kuzbX8TlWmVvWFODqVFbQ+s7hYfT6vMnO8rhIgswlYPvep7yfoWF57QD2jTgZoPdPxNVO4D2RsJgOoY+prMxmfmc7Y2vTLBN5e419CzYD/AJ4Xa0KtOo/DAAAAAElFTkSuQmCC';
+const PIN_IMG = new Image();
+PIN_IMG.onload = () => { if (state && state.img) render(); };
+PIN_IMG.src = PIN_SRC;
+const pinCache = {};
+function drawPin(ctx, x, y, w, h, color){
+  if (!PIN_IMG.complete || !PIN_IMG.naturalWidth) return;
+  const cw = Math.max(4, Math.round(w * 4)), chh = Math.max(4, Math.round(h * 4));
+  const key = color + '|' + cw + 'x' + chh;
+  let pc = pinCache[key];
+  if (!pc){
+    pc = document.createElement('canvas');
+    pc.width = cw; pc.height = chh;
+    const g = pc.getContext('2d');
+    g.drawImage(PIN_IMG, 0, 0, cw, chh);
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = color;
+    g.fillRect(0, 0, cw, chh);
+    pinCache[key] = pc;
+  }
+  ctx.drawImage(pc, x, y, w, h);
+}
+
+function readFields(){
+  const g = id => $('#'+id).value;
+  return {
+    visitor: g('f_visitor'), target: g('f_target'), method: g('f_method'),
+    purpose: g('f_purpose'), location: g('f_location'),
+    time: g('f_time'), date: g('f_date'), week: g('f_week')
+  };
+}
+
+function line(ctx, text, x, baseline, size, sx, sp, weight, family, colonPad){
+  ctx.save();
+  ctx.font = weight + ' ' + size.toFixed(2) + 'px ' + (family || FF);
+  ctx.scale(sx, 1);
+  let cx = x / sx;
+  for (let i = 0; i < text.length; i++){
+    const ch = text.charAt(i);
+    ctx.fillText(ch, cx, baseline);
+    cx += ctx.measureText(ch).width + sp;
+    if (colonPad && ch === ':') cx += colonPad;
+  }
+  ctx.restore();
+}
+
+
+/* 把卡片里原有的白字抹掉：先反解出被卡片压暗前的背景，
+   再在文字框内圈出「比周围亮」的像素，沿纵向用上下背景插值补回。 */
+const SRC_ALPHA = 0.5, SRC_TINT = 100;
+const TEXT_BOXES = [[30,24,382,74],[30,100,382,150],[30,176,488,226],
+                    [30,251,602,302],[28,362,248,418],[240,374,604,419],[30,444,542,488]];
+
+/* iOS Safari 不支持 canvas 的 filter 属性，
+   所以「模糊」统一用「缩小再放大」实现，效果等价且更快。 */
+function cheapBlur(srcCanvas, radius){
+  const f = Math.max(2, Math.round(Math.max(1, radius) / 2));
+  const w = Math.max(1, Math.round(srcCanvas.width / f));
+  const h = Math.max(1, Math.round(srcCanvas.height / f));
+  const sm = document.createElement('canvas'); sm.width = w; sm.height = h;
+  const sc = sm.getContext('2d');
+  sc.imageSmoothingEnabled = true; sc.imageSmoothingQuality = 'high';
+  sc.drawImage(srcCanvas, 0, 0, w, h);
+  const bg = document.createElement('canvas');
+  bg.width = srcCanvas.width; bg.height = srcCanvas.height;
+  const bc = bg.getContext('2d');
+  bc.imageSmoothingEnabled = true; bc.imageSmoothingQuality = 'high';
+  bc.drawImage(sm, 0, 0, bg.width, bg.height);
+  return bg;
+}
+
+function eraseCard(ctx, x0, y0, w, h, s){
+  if (w < 4 || h < 4) return;
+  const src = ctx.getImageData(x0, y0, w, h);
+  const d = src.data;
+
+  const c1 = document.createElement('canvas'); c1.width = w; c1.height = h;
+  c1.getContext('2d').putImageData(src, 0, 0);
+  const bd = cheapBlur(c1, Math.max(2, 14 * s)).getContext('2d').getImageData(0, 0, w, h).data;
+
+  const k = 1 / (1 - SRC_ALPHA), off = -SRC_ALPHA * SRC_TINT * k;
+  const cl = v => v < 0 ? 0 : (v > 255 ? 255 : v);
+  const lum = (r, g, b) => 0.299*r + 0.587*g + 0.114*b;
+  // 注意顺序：先在原始像素上判「比周围亮」（白字 vs 半透明灰底对比强、判得准），
+  // 判完再统一反解。反过来做会把白字顶到 255 并连带周围拉亮，边界反而糊。
+
+  const inBox = new Uint8Array(w*h);
+  for (const b of TEXT_BOXES){
+    const X0 = Math.max(0, Math.round(b[0]*s)), Y0 = Math.max(0, Math.round(b[1]*s));
+    const X1 = Math.min(w, Math.round(b[2]*s)), Y1 = Math.min(h, Math.round(b[3]*s));
+    for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++) inBox[y*w + x] = 1;
+  }
+
+  const m = new Uint8Array(w*h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    const p = y*w + x, i = p*4;
+    if (inBox[p] && lum(d[i], d[i+1], d[i+2]) - lum(bd[i], bd[i+1], bd[i+2]) > 16) m[p] = 1;
+  }
+  for (let i = 0; i < d.length; i += 4){
+    d[i] = cl(d[i]*k + off); d[i+1] = cl(d[i+1]*k + off); d[i+2] = cl(d[i+2]*k + off);
+    bd[i] = cl(bd[i]*k + off); bd[i+1] = cl(bd[i+1]*k + off); bd[i+2] = cl(bd[i+2]*k + off);
+  }
+  const m2 = new Uint8Array(m);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    if (!m[y*w + x]) continue;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){
+      const yy = y + dy, xx = x + dx;
+      if (yy >= 0 && yy < h && xx >= 0 && xx < w) m2[yy*w + xx] = 1;
+    }
+  }
+  for (let i = 0; i < m2.length; i++) if (!inBox[i]) m2[i] = 0;
+
+  for (let x = 0; x < w; x++){
+    let y = 0;
+    while (y < h){
+      if (!m2[y*w + x]){ y++; continue; }
+      let yA = y - 1;
+      while (yA >= 0 && m2[yA*w + x]) yA--;
+      let yB = y;
+      while (yB < h && m2[yB*w + x]) yB++;
+      let top, bot;
+      if (yA >= 0){ const t = (yA*w + x)*4; top = [d[t], d[t+1], d[t+2]]; }
+      else if (yB < h){ const t = (yB*w + x)*4; top = [d[t], d[t+1], d[t+2]]; }
+      else top = [128,128,128];
+      if (yB < h){ const t = (yB*w + x)*4; bot = [d[t], d[t+1], d[t+2]]; }
+      else bot = top;
+      const span = Math.max(1, yB - yA);
+      for (let yy = Math.max(0, yA); yy < Math.min(yB, h); yy++){
+        const t = (yy - yA) / span, i = (yy*w + x)*4;
+        d[i]   = top[0] + (bot[0]-top[0])*t;
+        d[i+1] = top[1] + (bot[1]-top[1])*t;
+        d[i+2] = top[2] + (bot[2]-top[2])*t;
+      }
+      y = yB;
+    }
+  }
+
+  const oc = document.createElement('canvas'); oc.width = w; oc.height = h;
+  const octx = oc.getContext('2d');
+  const id = octx.createImageData(w, h);
+  id.data.set(d);
+  octx.putImageData(id, 0, 0);
+  ctx.drawImage(oc, 0, 0, w, h, x0, y0, w, h);
+}
+
+function paint(ctx, W, H, img, st, f){
+  const s = W / BASE_W * st.scale;
+  const fs = v => v * s;
+  const bx = fs(st.boxX), by = fs(st.boxY);
+  const bw = fs(st.boxW), bh = fs(st.boxH);
+  const radius = fs(st.radius);
+
+  /* --- 卡片底：反解 → 擦掉原文字 →（可选模糊）→ 叠色 --- */
+  const x0 = Math.round(bx), y0 = Math.round(by);
+  const cw = Math.round(bw), chh = Math.round(bh);
+  ctx.save();
+  roundRect(ctx, bx, by, bw, bh, radius);
+  ctx.clip();
+  ctx.drawImage(img, 0, 0, W, H);
+  eraseCard(ctx, x0, y0, cw, chh, s);
+  if (st.blur > 0){
+    const tc = document.createElement('canvas'); tc.width = cw; tc.height = chh;
+    tc.getContext('2d').drawImage(ctx.canvas, x0, y0, cw, chh, 0, 0, cw, chh);
+    const sb = cheapBlur(tc, fs(st.blur));
+    ctx.drawImage(sb, 0, 0, cw, chh, x0, y0, cw, chh);
+  }
+  ctx.fillStyle = hexA(st.card, st.alpha);
+  ctx.fillRect(bx, by, bw, bh);
+  if (CAL.ruleA > 0){
+    ctx.fillStyle = 'rgba(255,255,255,' + CAL.ruleA + ')';
+    ctx.fillRect(bx, by + fs(CAL.ruleY), bw, Math.max(1, s * 0.9));
+  }
+  ctx.restore();
+
+  /* --- 文字 --- */
+  ctx.save();
+  ctx.globalAlpha = st.textAlpha != null ? st.textAlpha : 1;
+  ctx.fillStyle = st.color;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+
+  const rows = ['拜访人:' + f.visitor, '拜访对象:' + f.target,
+                '拜访方式:' + f.method, '拜访目的:' + f.purpose];
+  for (let i = 0; i < rows.length; i++){
+    line(ctx, rows[i], bx + fs(CAL.bodyX), by + fs(CAL.bodyBase0 + i * CAL.bodyStep),
+         fs(st.bodySize), st.bodySx, fs(st.bodySp), 500, FF, i === 3 ? fs(9) : 0);
+  }
+
+  line(ctx, f.time, bx + fs(CAL.timeX), by + fs(CAL.timeBase),
+       fs(st.timeSize), st.timeSx, fs(st.timeSp), 500);
+
+  const dv = f.date ? f.date.replace(/\/+$/, '') : '';
+  // 日期是跟着时间宽度走的（SF 数字是 proportional 的，"1" 比 "0" 窄），定了位才不错行
+  let dateX = CAL.dateX;
+  if (f.time){
+    ctx.save();
+    ctx.font = '500 ' + fs(st.timeSize).toFixed(2) + 'px ' + FF;
+    let tw = 0;
+    for (const ch of f.time) tw += ctx.measureText(ch).width * st.timeSx + fs(st.timeSp);
+    ctx.restore();
+    dateX = CAL.timeX + tw + 33;
+  }
+  if (dv){
+    line(ctx, dv + '/', bx + fs(dateX), by + fs(CAL.dateBase),
+         fs(st.dateSize), st.dateSx, fs(st.dateSp), 400, NF);
+  }
+  if (dv && f.week){
+    line(ctx, f.week, bx + dateX + fs(CAL.weekX - CAL.dateX), by + fs(CAL.dateBase),
+         fs(st.dateSize), st.weekSx, fs(st.weekSp), 500, FF);
+  }
+
+  if (f.location){
+    drawPin(ctx, bx + fs(CAL.pinX), by + fs(CAL.pinY), fs(CAL.pinW), fs(CAL.pinH), ctx.fillStyle);
+    line(ctx, f.location, bx + fs(CAL.locX), by + fs(CAL.locBase),
+         fs(st.locSize), st.locSx, fs(st.locSp), 400, FF);
+  }
+  ctx.restore();
+
+  return {x: bx, y: by, w: bw, h: bh};
+}
+
+function hexA(hex, a){
+  const h = hex.replace('#','');
+  const n = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+  const r = parseInt(n.slice(0,2),16), g = parseInt(n.slice(2,4),16), b = parseInt(n.slice(4,6),16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+}
+
+function render(){
+  if (!state.img) return;
+  const cv = $('#cv');
+  const W = state.W, H = state.H;
+  if (cv.width !== W || cv.height !== H){ cv.width = W; cv.height = H; }
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(state.img, 0, 0, W, H);
+  cardRect = paint(ctx, W, H, state.img, state.st, readFields());
+  syncBox();
+  $('#wrap').hidden = false;
+  $('#empty').hidden = true;
+}
+
+function syncBox(){
+  if (!cardRect) return;
+  const el = $('#box');
+  el.style.left   = (cardRect.x/state.W*100) + '%';
+  el.style.top    = (cardRect.y/state.H*100) + '%';
+  el.style.width  = (cardRect.w/state.W*100) + '%';
+  el.style.height = (cardRect.h/state.H*100) + '%';
+}
+
+/* ---------------- 载入图片 ---------------- */
+function loadFile(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      state.img = img; state.W = img.naturalWidth; state.H = img.naturalHeight;
+      if ($('#autoNow').checked) fillNow();
+      render();
+      $('#saveBtn').disabled = false;
+      $('#batchBtn').disabled = state.files.length < 2;
+      res();
+    };
+    img.onerror = e => { URL.revokeObjectURL(url); rej(e); };
+    img.src = url;
+  });
+}
+
+function fillNow(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  $('#f_time').value = p(d.getHours()) + ':' + p(d.getMinutes());
+  $('#f_date').value = d.getFullYear() + '/' + p(d.getMonth()+1) + '/' + p(d.getDate());
+  if ($('#autoWeek').checked) $('#f_week').value = WEEKDAYS[d.getDay()];
+}
+
+async function handleFiles(list){
+  const files = Array.from(list).filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  state.files = files;
+  await loadFile(files[0]);
+  toast(files.length > 1 ? ('已载入 ' + files.length + ' 张，编辑第一张') : '已载入');
+}
+
+/* ---------------- 拖拽调整卡片 ---------------- */
+function bindDrag(){
+  const wrap = $('#wrap'), box = $('#box'), handle = $('#handle');
+
+  function pct(ev, r){
+    return { dx: (ev.clientX - start.x)/r.width, dy: (ev.clientY - start.y)/r.height };
+  }
+  let start = {x:0,y:0}, base = null, r0 = null, mode = '';
+
+  function onDown(e, m){
+    mode = m;
+    const r = wrap.getBoundingClientRect();
+    r0 = r;
+    start = {x:e.clientX, y:e.clientY};
+    base = {x:state.st.boxX, y:state.st.boxY, w:state.st.boxW};
+    box.setPointerCapture(e.pointerId);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  box.addEventListener('pointerdown', e => { if (e.target === handle) return; onDown(e,'move'); });
+  handle.addEventListener('pointerdown', e => onDown(e,'size'));
+
+  box.addEventListener('pointermove', e => {
+    if (!mode) return;
+    const d = pct(e, r0);
+    const s0 = state.W / BASE_W * state.st.scale;
+    if (mode === 'move'){
+      state.st.boxX = clamp(base.x + d.dx * state.W / s0, -900, 2000);
+      state.st.boxY = clamp(base.y + d.dy * state.H / s0, -900, 2000);
+    } else {
+      state.st.boxW = clamp(base.w + d.dx * state.W / s0, 200, 1200);
+    }
+    buildSliders();
+    render();
+  });
+
+  const up = e => { mode = ''; try{ box.releasePointerCapture(e.pointerId); }catch(_){} };
+  box.addEventListener('pointerup', up);
+  box.addEventListener('pointercancel', up);
+}
+
+function clamp(v,a,b){ return Math.min(b, Math.max(a, v)); }
+
+/* ---------------- 控件 ---------------- */
+const SLIDERS = [
+  ['scale',   '整体缩放', 0.60, 1.60, 0.01, 2],
+  ['boxW',    '卡片宽度', 300,  1200, 1,    0],
+  ['boxH',    '卡片高度', 250,  900,  1,    0],
+  ['radius',  '圆角',     0,    70,   1,    0],
+  ['alpha',   '不透明度', 0.15, 1.00, 0.01, 2],
+  ['blur',    '磨砂模糊', 0,    90,   1,    0],
+  ['bodySize','正文字号', 24,   60,   1,    0],
+  ['bodySp',  '正文字距', -4,   18,   0.1,  1],
+  ['bodySx',  '正文拉伸', 1.00, 1.50, 0.01, 2],
+  ['timeSize','时间字号', 32,   100,  1,    0],
+  ['locSize', '地点字号', 18,   48,   1,    0]
+];
+
+function buildSliders(){
+  const host = $('#sliders');
+  host.innerHTML = '';
+  for (const [key,label,min,max,step,dec] of SLIDERS){
+    const cur = state.st[key];
+    const d = document.createElement('div');
+    d.className = 'sl';
+    d.innerHTML = '<span>' + label + '</span>'
+      + '<input type="range" id="sl_' + key + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + cur + '">'
+      + '<b id="v_' + key + '">' + Number(cur).toFixed(dec) + '</b>';
+    host.appendChild(d);
+    const inp = d.querySelector('input'), val = d.querySelector('b');
+    inp.addEventListener('input', () => {
+      const v = parseFloat(inp.value);
+      state.st[key] = v;
+      val.textContent = v.toFixed(dec);
+      render();
+    });
+  }
+}
+
+function bindFields(){
+  ['visitor','target','method','purpose','location','time','date','week'].forEach(k => {
+    $('#f_' + k).addEventListener('input', render);
+  });
+  $('#f_date').addEventListener('change', () => {
+    if (!$('#autoWeek').checked) return;
+    const v = $('#f_date').value.trim().replace(/-/g,'/').replace(/\./g,'/').replace(/\/+$/,'');
+    const m = v.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (m){
+      const d = new Date(+m[1], +m[2]-1, +m[3]);
+      if (!isNaN(d)) $('#f_week').value = WEEKDAYS[d.getDay()];
+      render();
+    }
+  });
+  $('#color').addEventListener('input', e => { state.st.color = e.target.value; render(); });
+}
+
+function resetStyle(){
+  state.st = JSON.parse(JSON.stringify(DEF));
+  buildSliders();
+  $('#color').value = DEF.color;
+  render();
+  toast('版式已重置');
+}
+
+/* ---------------- 导出 ---------------- */
+/* 手机上优先调系统分享面板（可以直接存进相册）；
+   桌面或浏览器不支持时退回普通下载。 */
+function isMobile(){
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+async function download(blob, name){
+  try{
+    if (isMobile() && navigator.canShare && window.File){
+      const file = new File([blob], name, {type:'image/jpeg'});
+      if (navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:name});
+        return;
+      }
+    }
+  }catch(e){
+    if (e && e.name === 'AbortError') return;   // 用户取消
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
+  if (isMobile()) toast('若没自动保存，长按图片存相册');
+}
+
+function exportName(prefix){
+  const f = readFields();
+  const d = (f.date || 'date').replace(/[\/\\:*?"<>|]/g,'-');
+  const t = (f.time || '').replace(':','') || '0000';
+  return prefix + '_' + d + '_' + t + '.jpg';
+}
+
+function saveOne(){
+  const cv = $('#cv');
+  if (!cv.width){ toast('先选一张照片'); return; }
+  cv.toBlob(async b => {
+    await download(b, exportName('拜访'));
+    if (!isMobile()) toast('已保存');
+  }, 'image/jpeg', 0.95);
+}
+
+async function batchExport(){
+  if (state.files.length < 2) return;
+  const st = JSON.parse(JSON.stringify(state.st));
+  const f = readFields();
+  const c = document.createElement('canvas');
+  const cx = c.getContext('2d');
+  $('#batchBtn').disabled = true;
+  for (let i = 0; i < state.files.length; i++){
+    const file = state.files[i];
+    const img = await loadImg(file);
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    cx.clearRect(0,0,c.width,c.height);
+    cx.drawImage(img, 0, 0, c.width, c.height);
+    paint(cx, c.width, c.height, img, st, f);
+    await new Promise(res => c.toBlob(b => {
+      const base = file.name.replace(/\.[^.]+$/, '');
+      download(b, base + '_wm.jpg');
+      res();
+    }, 'image/jpeg', 0.95));
+    await new Promise(r => setTimeout(r, 450));
+  }
+  $('#batchBtn').disabled = false;
+  toast('批量导出完成');
+}
+
+function loadImg(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const i = new Image();
+    i.onload = () => { URL.revokeObjectURL(url); res(i); };
+    i.onerror = e => { URL.revokeObjectURL(url); rej(e); };
+    i.src = url;
+  });
+}
+
+/* ---------------- 杂项 ---------------- */
+let toastTimer = null;
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 1800);
+}
+
+function bindKeys(){
+  document.addEventListener('keydown', e => {
+    if (!state.img) return;
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    const step = e.shiftKey ? 10 : 1;
+    let hit = true;
+    if (e.key === 'ArrowLeft')  state.st.boxX -= step;
+    else if (e.key === 'ArrowRight') state.st.boxX += step;
+    else if (e.key === 'ArrowUp')    state.st.boxY -= step;
+    else if (e.key === 'ArrowDown')  state.st.boxY += step;
+    else hit = false;
+    if (hit){ e.preventDefault(); render(); }
+  });
+}
+
+/* ---------------- 记忆上次参数 ---------------- */
+const LS_KEY = 'visit_wm_tool_v2';
+let lsTimer = null;
+
+function saveLS(){
+  clearTimeout(lsTimer);
+  lsTimer = setTimeout(() => {
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify({st: state.st, f: readFields()}));
+    }catch(_){}
+  }, 400);
+}
+
+function loadLS(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    if (o.st) Object.assign(state.st, o.st);
+    if (o.f) for (const k in o.f){
+      const el = $('#f_' + k);
+      if (el && o.f[k] != null) el.value = o.f[k];
+    }
+  }catch(_){}
+}
+
+function bindChips(){
+  document.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const d = new Date();
+      if (btn.dataset.day !== undefined) d.setDate(d.getDate() + Number(btn.dataset.day));
+      const p = n => String(n).padStart(2,'0');
+      if (btn.dataset.now) $('#f_time').value = p(d.getHours()) + ':' + p(d.getMinutes());
+      $('#f_date').value = d.getFullYear() + '/' + p(d.getMonth()+1) + '/' + p(d.getDate());
+      if ($('#autoWeek').checked) $('#f_week').value = WEEKDAYS[d.getDay()];
+      render(); saveLS();
+    });
+  });
+}
+
+/* ---------------- 初始化 ---------------- */
+loadLS();
+buildSliders();
+bindFields();
+bindDrag();
+bindKeys();
+bindChips();
+
+document.addEventListener('input', e => {
+  if (e.target.closest('.panel') && e.target.type !== 'color') saveLS();
+});
+document.addEventListener('change', e => {
+  if (e.target.closest('.panel')) saveLS();
+});
+
+$('#file').addEventListener('change', e => { handleFiles(e.target.files); e.target.value = ''; });
+$('#resetBtn').addEventListener('click', resetStyle);
+$('#saveBtn').addEventListener('click', saveOne);
+$('#batchBtn').addEventListener('click', batchExport);
+
+['dragover','drop'].forEach(ev => {
+  window.addEventListener(ev, e => e.preventDefault());
+});
+window.addEventListener('drop', e => {
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length){
+    handleFiles(e.dataTransfer.files);
+  }
+});
+$('#pickBtn').addEventListener('click', e => { if (e.target.tagName !== 'INPUT') $('#file').click(); });
+window.addEventListener('resize', syncBox);
+
+/* 演示模式：?demo=1 自动载入同目录 sample.jpg */
+(function(){
+  const q = new URLSearchParams(location.search);
+  const dm = q.get('demo');
+  if (!dm) return;
+  const fn = dm === '1' ? 'sample.jpg' : (dm + '.jpg');
+  fetch(fn).then(r => r.blob()).then(b => {
+    const f = new File([b], fn, {type: b.type || 'image/jpeg'});
+    return handleFiles([f]);
+  }).catch(err => console.warn('demo load failed:', err));
+})();
+
+</script>
+</body>
+</html>
