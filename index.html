@@ -158,7 +158,8 @@
 <header>
   <div class="logo"><i>◉</i> <span class="logo-t">拜访水印工具</span></div>
   <div class="spacer"></div>
-  <label class="btn primary" id="pickBtn">选择图片<input type="file" id="file" accept="image/*" multiple hidden></label>
+  <label class="btn primary" id="pickBtn" for="file">选择图片</label>
+  <input type="file" id="file" accept="image/*" multiple hidden>
   <button class="btn" id="resetBtn"><span class="long">重置版式</span><span class="short">重置</span></button>
   <button class="btn" id="saveBtn" disabled><span class="long">保存图片</span><span class="short">保存</span></button>
 </header>
@@ -532,8 +533,14 @@ function loadFile(file){
       $('#batchBtn').disabled = state.files.length < 2;
       res();
     };
-    img.onerror = e => { URL.revokeObjectURL(url); rej(e); };
+    img.onerror = e => { URL.revokeObjectURL(url); rej(e || new Error('decode failed')); };
     img.src = url;
+    /* iOS 偶发：onload 迟迟不触发。2.5 秒后兜底重试一次。 */
+    setTimeout(() => {
+      if (state.img === img) return;
+      if (img.complete && img.naturalWidth) return;
+      try { img.src = url; } catch(_){}
+    }, 2500);
   });
 }
 
@@ -546,10 +553,22 @@ function fillNow(){
 }
 
 async function handleFiles(list){
-  const files = Array.from(list).filter(f => f.type.startsWith('image/'));
-  if (!files.length) return;
+  /* iPhone 上 HEIC 照片的 file.type 有时是空字符串，
+     只按 type 过滤会把它们全部丢掉，表现为「选了没反应」。 */
+  const files = Array.from(list).filter(f =>
+    !f.type || f.type.startsWith('image/') ||
+    /\.(jpe?g|png|heic|heif|webp|gif|bmp|tiff?)$/i.test(f.name || '')
+  );
+  if (!files.length){ toast('没读到图片文件，换一张试试'); return; }
   state.files = files;
-  await loadFile(files[0]);
+  toast(files.length > 1 ? ('载入中…共 ' + files.length + ' 张') : '载入中…');
+  try {
+    await loadFile(files[0]);
+  } catch (err){
+    console.error('loadFile failed:', err, files[0]);
+    toast('这张打不开：' + (files[0].type || '未知格式') + '，换 JPG 试试');
+    return;
+  }
   toast(files.length > 1 ? ('已载入 ' + files.length + ' 张，编辑第一张') : '已载入');
 }
 
@@ -832,7 +851,7 @@ window.addEventListener('drop', e => {
     handleFiles(e.dataTransfer.files);
   }
 });
-$('#pickBtn').addEventListener('click', e => { if (e.target.tagName !== 'INPUT') $('#file').click(); });
+/* input 由 label[for] 原生触发，不要再手动 .click()，否则 iOS 上会触发两次、选择器闪一下就关 */
 window.addEventListener('resize', syncBox);
 
 /* 演示模式：?demo=1 自动载入同目录 sample.jpg */
