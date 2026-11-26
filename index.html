@@ -461,21 +461,25 @@ function paint(ctx, W, H, img, st, f){
 
   const dv = f.date ? f.date.replace(/\/+$/, '') : '';
   // 日期是跟着时间宽度走的（SF 数字是 proportional 的，"1" 比 "0" 窄），定了位才不错行
-  let dateX = CAL.dateX;
+  /* 单位必须统一成「图片像素」。以前写成 CAL.timeX + tw + 33，
+     其中 tw 是图片像素而 CAL.timeX/33 是 1280 基准单位，
+     在 1280 宽的照片上恰好相等所以看不出问题，
+     换成大图（fs≠1）后日期被二次缩放、跑到星期四右边去。 */
+  let datePx = fs(CAL.dateX);
   if (f.time){
     ctx.save();
     ctx.font = '500 ' + fs(st.timeSize).toFixed(2) + 'px ' + FF;
     let tw = 0;
     for (const ch of f.time) tw += ctx.measureText(ch).width * st.timeSx + fs(st.timeSp);
     ctx.restore();
-    dateX = CAL.timeX + tw + 33;
+    datePx = fs(CAL.timeX) + tw + fs(st.dateGap != null ? st.dateGap : 33);
   }
   if (dv){
-    line(ctx, dv + '/', bx + fs(dateX), by + fs(CAL.dateBase),
+    line(ctx, dv + '/', bx + datePx, by + fs(CAL.dateBase),
          fs(st.dateSize), st.dateSx, fs(st.dateSp), 400, NF);
   }
   if (dv && f.week){
-    line(ctx, f.week, bx + dateX + fs(CAL.weekX - CAL.dateX), by + fs(CAL.dateBase),
+    line(ctx, f.week, bx + datePx + fs(CAL.weekX - CAL.dateX), by + fs(CAL.dateBase),
          fs(st.dateSize), st.weekSx, fs(st.weekSp), 500, FF);
   }
 
