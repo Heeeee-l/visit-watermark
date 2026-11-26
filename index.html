@@ -243,7 +243,7 @@ const CAL = {
   dateX:276, dateBase:409, weekX:484,
   locX:88, locBase:480,
   pinX:38, pinY:451, pinW:28, pinH:28,
-  ruleY:328, ruleA:0.10
+  ruleY:328, ruleA:0.22
 };
 
 const state = {
@@ -438,7 +438,7 @@ function paint(ctx, W, H, img, st, f){
   ctx.fillRect(bx, by, bw, bh);
   if (CAL.ruleA > 0){
     ctx.fillStyle = 'rgba(255,255,255,' + CAL.ruleA + ')';
-    ctx.fillRect(bx, by + fs(CAL.ruleY), bw, Math.max(1, s * 0.9));
+    ctx.fillRect(bx, by + fs(CAL.ruleY), bw, Math.max(1, fs(1.6)));
   }
   ctx.restore();
 
