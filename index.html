@@ -75,6 +75,13 @@
     font-family:inherit;outline:none;
   }
   .row input[type=text]:focus{border-color:var(--acc);background:#0d1412}
+  .row .mini{
+    flex:0 0 auto;height:30px;padding:0 10px;border-radius:7px;cursor:pointer;
+    border:1px solid var(--line);background:#182120;color:var(--acc);
+    font-size:12.5px;font-family:inherit;white-space:nowrap;
+  }
+  .row .mini:active{background:#20302d}
+  .row .mini:disabled{opacity:.5;cursor:default}
   .row2{display:flex;gap:8px}
   .row2 .row{flex:1}
   .row2 .row > span{flex:0 0 42px}
@@ -180,7 +187,7 @@
       <label class="row"><span>拜访对象</span><input type="text" id="f_target" placeholder="请输入拜访对象"></label>
       <label class="row"><span>拜访方式</span><input type="text" id="f_method" value="当面拜访"></label>
       <label class="row"><span>拜访目的</span><input type="text" id="f_purpose" value="黄金宝典客户"></label>
-      <label class="row"><span>地点</span><input type="text" id="f_location" value="河南省信阳市浉河区茶韵路"></label>
+      <label class="row"><span>地点</span><input type="text" id="f_location" value="河南省信阳市浉河区茶韵路"><button type="button" class="mini" id="geoBtn" title="使用当前位置">定位</button></label>
       <label class="row"><span>时间</span><input type="text" id="f_time" value="09:12" placeholder="09:12"></label>
       <div class="row2">
         <label class="row"><span>日期</span><input type="text" id="f_date" value="2026/11/26" placeholder="2026/11/26"></label>
@@ -247,7 +254,7 @@ const CAL = {
   bodyX:42, bodyBase0:63, bodyStep:76,
   timeX:33, timeBase:411,
   dateX:276, dateBase:409, weekX:484,
-  locX:88, locBase:480,
+  locX:88, locBase:480, locStep:56, locRight:14,
   pinX:38, pinY:451, pinW:28, pinH:28,
   ruleY:328, ruleA:0.38
 };
@@ -320,12 +327,28 @@ function line(ctx, text, x, baseline, size, sx, sp, weight, family, colonPad){
   ctx.restore();
 }
 
+/* 按可用宽度把一串文字切成多行。
+   中文按字切，西文也按字切（地点串里基本都是汉字，够用）。 */
+function wrapLine(ctx, text, maxW, size, sx, sp, weight, family){
+  const out = []; let cur = '', w = 0;
+  ctx.save();
+  ctx.font = weight + ' ' + size.toFixed(2) + 'px ' + (family || FF);
+  for (const ch of text){
+    const cw = ctx.measureText(ch).width * sx + sp;
+    if (cur && w + cw > maxW){ out.push(cur); cur = ch; w = cw; }
+    else { cur += ch; w += cw; }
+  }
+  if (cur) out.push(cur);
+  ctx.restore();
+  return out;
+}
+
 
 /* 把卡片里原有的白字抹掉：先反解出被卡片压暗前的背景，
    再在文字框内圈出「比周围亮」的像素，沿纵向用上下背景插值补回。 */
 const SRC_ALPHA = 0.5, SRC_TINT = 100;
 const TEXT_BOXES = [[30,24,382,74],[30,100,382,150],[30,176,488,226],
-                    [30,251,602,302],[28,362,248,418],[240,374,604,419],[30,444,542,488]];
+                    [30,251,602,302],[28,362,248,418],[240,374,604,419],[28,440,600,575]];
 
 /* iOS Safari 不支持 canvas 的 filter 属性，
    所以「模糊」统一用「缩小再放大」实现，效果等价且更快。 */
@@ -372,7 +395,11 @@ function eraseCard(ctx, x0, y0, w, h, s){
     const p = y*w + x, i = p*4;
     if (inBox[p] && lum(d[i], d[i+1], d[i+2]) - lum(bd[i], bd[i+1], bd[i+2]) > 16) m[p] = 1;
   }
-  for (let i = 0; i < d.length; i += 4){
+  /* 只反解「原卡片」那一段：地点折行会把卡片撑高，多出来的那截原图本来就没被灰压过，
+     照反解会被 clip 到 255，再叠灰就比周围暗一大截，出现横向断层。 */
+  const h0 = Math.min(Math.round(CAL.boxH * s), h);
+  for (let y = 0; y < h0; y++) for (let x = 0; x < w; x++){
+    const i = (y*w + x) * 4;
     d[i] = cl(d[i]*k + off); d[i+1] = cl(d[i+1]*k + off); d[i+2] = cl(d[i+2]*k + off);
     bd[i] = cl(bd[i]*k + off); bd[i+1] = cl(bd[i+1]*k + off); bd[i+2] = cl(bd[i+2]*k + off);
   }
@@ -423,7 +450,19 @@ function paint(ctx, W, H, img, st, f){
   const s = W / BASE_W * st.scale;
   const fs = v => v * s;
   const bx = fs(st.boxX), by = fs(st.boxY);
-  const bw = fs(st.boxW), bh = fs(st.boxH);
+  const bw = fs(st.boxW);
+  /* 地点折成两行时会顶到卡片底边，所以卡片高度要让一点——原 App 也是内容多了卡片变长。 */
+  const _segs = f.location
+    ? wrapLine(ctx, f.location, bw - fs(CAL.locX) - fs(CAL.locRight),
+               fs(st.locSize), st.locSx, fs(st.locSp), 400, FF).length
+    : 1;
+  // 两行时：地点上移 34、行距收到 50，卡片只比原来高一点点。
+  // 撑太高会在原卡片底边露一条色差带，看着像贴了个新框。
+  const locBase = fs(CAL.locBase) - (_segs > 1 ? fs(11) : 0);
+  const locStep = _segs > 1 ? fs(50) : fs(CAL.locStep);
+  const bh = _segs > 1
+    ? Math.max(fs(st.boxH), fs(560), locBase + (_segs - 1) * locStep + fs(46))
+    : fs(st.boxH);
   const radius = fs(st.radius);
 
   /* --- 卡片底：反解 → 擦掉原文字 →（可选模糊）→ 叠色 --- */
@@ -442,6 +481,7 @@ function paint(ctx, W, H, img, st, f){
   }
   ctx.fillStyle = hexA(st.card, st.alpha);
   ctx.fillRect(bx, by, bw, bh);
+
   if (CAL.ruleA > 0){
     ctx.fillStyle = 'rgba(255,255,255,' + CAL.ruleA + ')';
     /* 线不铺满整张卡片：和正文左对齐，右侧留同样的内边距，
@@ -497,9 +537,18 @@ function paint(ctx, W, H, img, st, f){
   }
 
   if (f.location){
-    drawPin(ctx, bx + fs(CAL.pinX), by + fs(CAL.pinY), fs(CAL.pinW), fs(CAL.pinH), ctx.fillStyle);
-    line(ctx, f.location, bx + fs(CAL.locX), by + fs(CAL.locBase),
-         fs(st.locSize), st.locSx, fs(st.locSp), 400, FF);
+    const pinY = by + fs(CAL.pinY) - (_segs > 1 ? fs(11) : 0);
+    drawPin(ctx, bx + fs(CAL.pinX), pinY, fs(CAL.pinW), fs(CAL.pinH), ctx.fillStyle);
+    // 地点太长就折行：第二行起点和第一行文字左端对齐（不跟图标对齐），
+    // 这是原 App 的行为，地址长的时候会看到。
+    const lx = bx + fs(CAL.locX);
+    const maxW = bw - fs(CAL.locX) - fs(CAL.locRight);
+    const seg = wrapLine(ctx, f.location, maxW, fs(st.locSize), st.locSx, fs(st.locSp), 400, FF);
+    const step = locStep;
+    seg.forEach((ln, i) => {
+      line(ctx, ln, lx, by + locBase + i * step,
+           fs(st.locSize), st.locSx, fs(st.locSp), 400, FF);
+    });
   }
   ctx.restore();
 
@@ -879,6 +928,40 @@ bindFields();
 bindDrag();
 bindKeys();
 bindChips();
+
+/* ---- 用当前位置填「地点」 ----
+   浏览器 geolocation 只给经纬度，转中文地址要调高德的逆地理编码。
+   高德返回的地址带街道和小区（河南省信阳市平桥区南京路街道畜产路幸福家苑），
+   比水印里常见的「省+市+区+路」长，所以只取 省市区 + 街道名。 */
+const AMAP_KEY = 'f58725bd2e99b517a4c29f42f4a41603';
+$('#geoBtn').addEventListener('click', e => {
+  e.preventDefault(); e.stopPropagation();
+  const btn = e.currentTarget;
+  if (!navigator.geolocation) return toast('这个浏览器不支持定位');
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = '定位中';
+  const done = () => { btn.disabled = false; btn.textContent = old; };
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const r = await fetch(`https://restapi.amap.com/v3/geocode/regeo?location=${lng},${lat}&key=${AMAP_KEY}`);
+      const j = await r.json();
+      if (j.status !== '1') throw new Error(j.info || '接口返回失败');
+      const c = j.regeocode.addressComponent;
+      const street = (c.streetNumber && c.streetNumber.street) || '';
+      const addr = (c.province || '') + (c.city || '') + (c.district || '') + (street || c.township || '');
+      $('#f_location').value = addr;
+      render(); saveLS();
+      toast('已填入：' + addr);
+    } catch (err) {
+      toast('取地址失败：' + err.message);
+    } finally { done(); }
+  }, err => {
+    done();
+    toast(err.code === 1 ? '你拒绝了定位授权' : '定位失败，信号可能不好');
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+});
 
 document.addEventListener('input', e => {
   if (e.target.closest('.panel') && e.target.type !== 'color') saveLS();
