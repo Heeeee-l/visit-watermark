@@ -188,10 +188,10 @@
       <label class="row"><span>拜访方式</span><input type="text" id="f_method" value="当面拜访"></label>
       <label class="row"><span>拜访目的</span><input type="text" id="f_purpose" value="黄金宝典客户"></label>
       <label class="row"><span>地点</span><input type="text" id="f_location" value="河南省信阳市浉河区茶韵路"><button type="button" class="mini" id="geoBtn" title="使用当前位置">定位</button></label>
-      <label class="row"><span>时间</span><input type="text" id="f_time" value="09:12" placeholder="09:12"></label>
+      <label class="row"><span>时间</span><input type="text" id="f_time" placeholder="09:12"></label>
       <div class="row2">
-        <label class="row"><span>日期</span><input type="text" id="f_date" value="2026/11/26" placeholder="2026/11/26"></label>
-        <label class="row"><span>星期</span><input type="text" id="f_week" value="星期四"></label>
+        <label class="row"><span>日期</span><input type="text" id="f_date" placeholder="2026/11/26"></label>
+        <label class="row"><span>星期</span><input type="text" id="f_week" placeholder="星期四"></label>
       </div>
       <div class="chips">
         <button class="chip" data-day="0">今天</button>
@@ -769,6 +769,7 @@ function resetAll(){
     const el = $('#f_' + k);
     if (el) el.value = FIELD_DEFAULT[k];
   }
+  fillNow(true);       // 时间/日期回到「此刻」，不是留空
   buildSliders();
   $('#color').value = DEF.color;
   render();
@@ -894,6 +895,16 @@ function saveLS(){
   }, 400);
 }
 
+/* 时间/日期默认取「此刻」——打开页面就是当前时间，省得每次手填。
+   本地存的要是空的（第一次用、或恢复过默认）就补上。 */
+function fillNow(force){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  if (force || !$('#f_time').value) $('#f_time').value = p(d.getHours()) + ':' + p(d.getMinutes());
+  if (force || !$('#f_date').value) $('#f_date').value = d.getFullYear() + '/' + p(d.getMonth()+1) + '/' + p(d.getDate());
+  if (force || !$('#f_week').value) $('#f_week').value = WEEKDAYS[d.getDay()];
+}
+
 function loadLS(){
   try{
     const raw = localStorage.getItem(LS_KEY);
@@ -923,6 +934,7 @@ function bindChips(){
 
 /* ---------------- 初始化 ---------------- */
 loadLS();
+fillNow(false);        // localStorage 里是空的就填当前时间
 buildSliders();
 bindFields();
 bindDrag();
